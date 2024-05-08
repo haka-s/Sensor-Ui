@@ -3,13 +3,12 @@ from components.navegacion import ResponsiveMenuLayout
 from components.test import test
 from components.usuario import LoginRegisterScreen
 
-def main(page: ft.Page, title="Basic Responsive Menu"):
+def main(page: ft.Page, title="Dashboard de maquinas"):
     page.title = title
     page.appbar = None
     page.snack_bar = None
-    #page.client_storage.clear()
     def show_login_register_screen():
-        page.title = "Login/Register"
+        page.title = "Inicio de sesión/registro"
         page.vertical_alignment = ft.MainAxisAlignment.CENTER
         page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
         login_register_screen = LoginRegisterScreen(page, on_login_success=show_main_menu)
@@ -75,7 +74,6 @@ def main(page: ft.Page, title="Basic Responsive Menu"):
         show_main_menu()
 
 def is_user_authenticated(page):
-    # Check if the user is authenticated (e.g., by retrieving the access token from persistent storage)
     access_token = load_access_token(page)
     return access_token is not None
 
