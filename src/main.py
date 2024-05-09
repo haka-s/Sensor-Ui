@@ -1,5 +1,6 @@
 import flet as ft
 from components.navegacion import ResponsiveMenuLayout
+from components.status import machine_cards
 from components.test import test
 from components.usuario import LoginRegisterScreen
 
@@ -7,6 +8,8 @@ def main(page: ft.Page, title="Dashboard de maquinas"):
     page.title = title
     page.appbar = None
     page.snack_bar = None
+    machine_ids = [1, 2]  
+    #cards = 
     def show_login_register_screen():
         page.title = "Inicio de sesión/registro"
         page.vertical_alignment = ft.MainAxisAlignment.CENTER
@@ -32,7 +35,7 @@ def main(page: ft.Page, title="Dashboard de maquinas"):
                     selected_icon=ft.icons.LANDSCAPE,
                     label="Estado actual",
                 ),
-                test(),
+                machine_cards(page,machine_ids),
             ),
             (
                 dict(
@@ -104,4 +107,4 @@ def toggle_menu_width(menu: ResponsiveMenuLayout):
     menu.page.update()
 
 if __name__ == "__main__":
-    ft.app(target=main)
+    ft.app(target=main, assets_dir="assets")
