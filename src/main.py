@@ -1,6 +1,7 @@
+import asyncio
 import flet as ft
 from components.navegacion import ResponsiveMenuLayout
-from components.status import machine_cards
+from components.status import MachineCards
 from components.test import test
 from components.usuario import LoginRegisterScreen
 
@@ -9,7 +10,9 @@ def main(page: ft.Page, title="Dashboard de maquinas"):
     page.appbar = None
     page.snack_bar = None
     machine_ids = [1, 2]  
-    #cards = 
+    
+    
+    
     def show_login_register_screen():
         page.title = "Inicio de sesión/registro"
         page.vertical_alignment = ft.MainAxisAlignment.CENTER
@@ -20,7 +23,9 @@ def main(page: ft.Page, title="Dashboard de maquinas"):
 
     def show_main_menu():
         menu_button = ft.IconButton(ft.icons.MENU)
-
+        access_token = page.client_storage.get("access_token")
+        machine_cards_component = MachineCards(machines=machine_ids,access_token=access_token)
+        print(machine_cards_component)
         page.appbar = ft.AppBar(
             leading=menu_button,
             leading_width=40,
@@ -35,7 +40,16 @@ def main(page: ft.Page, title="Dashboard de maquinas"):
                     selected_icon=ft.icons.LANDSCAPE,
                     label="Estado actual",
                 ),
-                machine_cards(page,machine_ids),
+                ft.Row(controls=[
+                    ft.Column(
+                        horizontal_alignment="stretch",
+                        controls=[
+                            machine_cards_component
+                        ],
+                        expand=True,
+                    ),
+                ],
+                expand=True,)
             ),
             (
                 dict(
