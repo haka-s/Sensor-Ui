@@ -9,7 +9,7 @@ def main(page: ft.Page, title="Dashboard de maquinas"):
     page.title = title
     page.appbar = None
     page.snack_bar = None
-    machine_ids = [1, 2]  
+    machine_ids = [1, 2,3]  
     
     
     
