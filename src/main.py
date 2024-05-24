@@ -4,7 +4,7 @@ from components.navegacion import ResponsiveMenuLayout
 from components.status import MachineCards
 from components.test import test
 from components.usuario import LoginRegisterScreen
-
+from components.historical_analysis import SensorDataViewer
 def main(page: ft.Page, title="Dashboard de maquinas"):
     page.title = title
     page.appbar = None
@@ -25,7 +25,7 @@ def main(page: ft.Page, title="Dashboard de maquinas"):
         menu_button = ft.IconButton(ft.icons.MENU)
         access_token = page.client_storage.get("access_token")
         machine_cards_component = MachineCards(machines=machine_ids,access_token=access_token)
-        print(machine_cards_component)
+        historical = SensorDataViewer(access_token=access_token)
         page.appbar = ft.AppBar(
             leading=menu_button,
             leading_width=40,
@@ -45,6 +45,23 @@ def main(page: ft.Page, title="Dashboard de maquinas"):
                         horizontal_alignment="stretch",
                         controls=[
                             machine_cards_component
+                        ],
+                        expand=True,
+                    ),
+                ],
+                expand=True,)
+            ),
+            (
+                dict(
+                    icon=ft.icons.LANDSCAPE_OUTLINED,
+                    selected_icon=ft.icons.LANDSCAPE,
+                    label="Dato Historicos",
+                ),
+                ft.Row(controls=[
+                    ft.Column(
+                        horizontal_alignment="stretch",
+                        controls=[
+                            historical
                         ],
                         expand=True,
                     ),

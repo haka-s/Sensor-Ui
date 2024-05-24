@@ -1,6 +1,4 @@
 import flet as ft
-
-# Assuming these components are correctly defined in your project
 from components.navegacion import ResponsiveMenuLayout
 from usuario import Login
 
