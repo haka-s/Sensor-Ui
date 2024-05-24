@@ -10,9 +10,7 @@ def main(page: ft.Page, title="Dashboard de maquinas"):
     page.appbar = None
     page.snack_bar = None
     machine_ids = [1, 2,3]  
-    
-    
-    
+        
     def show_login_register_screen():
         page.title = "Inicio de sesión/registro"
         page.vertical_alignment = ft.MainAxisAlignment.CENTER
