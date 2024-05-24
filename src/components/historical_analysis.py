@@ -103,9 +103,9 @@ class SensorDataViewer(ft.Column):
             self.update_graph(None)
             return  # No machine selected, do nothing
         headers = {"Authorization": f"Bearer {self.access_token}"}
-        url = (f"http://localhost:8000/machines/{self.selected_machine}/sensors/history"
-               f"?sensor_name={self.sensor_name}&sensor_type={self.sensor_type}"
-               f"&start_date={self.start_date}&end_date={self.end_date}")
+        url = (f"http://localhost:8000/maquinas/{self.selected_machine}/sensores/historial"
+               f"?nombre_sensor={self.sensor_name}&tipo_sensor={self.sensor_type}"
+               f"&fecha_inicio={self.start_date}&fecha_fin={self.end_date}")
         async with aiohttp.ClientSession() as session:
             try:
                 async with session.get(url, headers=headers) as response:
