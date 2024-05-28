@@ -9,8 +9,10 @@ def main(page: ft.Page, title="Dashboard de maquinas"):
     page.title = title
     page.appbar = None
     page.snack_bar = None
-    machine_ids = [1, 2,3]  
-        
+    machine_ids = [1,3]  
+    page.theme = ft.Theme(color_scheme_seed="Orange",use_material3=True)
+    page.theme_mode = ft.ThemeMode.LIGHT
+      
     def show_login_register_screen():
         page.title = "Inicio de sesión/registro"
         page.vertical_alignment = ft.MainAxisAlignment.CENTER
@@ -42,6 +44,7 @@ def main(page: ft.Page, title="Dashboard de maquinas"):
                     ft.Column(
                         horizontal_alignment="stretch",
                         controls=[
+                            ft.Card(content=ft.Container(ft.Text('Estado actual', weight="bold"), padding=8)),
                             machine_cards_component
                         ],
                         expand=True,
@@ -53,12 +56,13 @@ def main(page: ft.Page, title="Dashboard de maquinas"):
                 dict(
                     icon=ft.icons.LANDSCAPE_OUTLINED,
                     selected_icon=ft.icons.LANDSCAPE,
-                    label="Dato Historicos",
+                    label="Datos Históricos",
                 ),
                 ft.Row(controls=[
                     ft.Column(
                         horizontal_alignment="stretch",
                         controls=[
+                            ft.Card(content=ft.Container(ft.Text('Datos Históricos', weight="bold"), padding=8)),
                             historical
                         ],
                         expand=True,
