@@ -9,7 +9,7 @@ def main(page: ft.Page, title="Dashboard de maquinas"):
     page.title = title
     page.appbar = None
     page.snack_bar = None
-    machine_ids = [1,3]  
+    machine_ids = [1,2,3]  
     page.theme = ft.Theme(color_scheme_seed="Orange",use_material3=True)
     page.theme_mode = ft.ThemeMode.LIGHT
       
@@ -66,9 +66,12 @@ def main(page: ft.Page, title="Dashboard de maquinas"):
                             historical
                         ],
                         expand=True,
+
                     ),
                 ],
-                expand=True,)
+                expand=True,
+
+                )
             ),
             (
                 dict(
@@ -87,16 +90,8 @@ def main(page: ft.Page, title="Dashboard de maquinas"):
         menu_layout = ResponsiveMenuLayout(page, pages)
 
         page.appbar.actions = [
-            ft.Row(
-                [
-                    ft.Text("Minimize\nto icons"),
-                    ft.Switch(on_change=lambda e: toggle_icons_only(menu_layout)),
-                    ft.Text("Menu\nwidth"),
-                    ft.Switch(
-                        value=True, on_change=lambda e: toggle_menu_width(menu_layout)
-                    ),
-                ]
-            )
+            ft.TextButton(text="Cerrar sesión", on_click=lambda e: logout()),
+            ft.TextButton(text="Cambiar contraseña", on_click=lambda e: change_password())
         ]
 
         page.clean()
@@ -131,13 +126,15 @@ def create_page(title: str, body: str):
         expand=True,
     )
 
-def toggle_icons_only(menu: ResponsiveMenuLayout):
-    menu.minimize_to_icons = not menu.minimize_to_icons
-    menu.page.update()
+def logout():
+    # Add the logic for logging out
+    print("User logged out successfully")
 
-def toggle_menu_width(menu: ResponsiveMenuLayout):
-    menu.menu_extended = not menu.menu_extended
-    menu.page.update()
+def change_password():
+    # Add the logic for changing password
+    print("Change password dialog opened")
+
+
 
 if __name__ == "__main__":
     ft.app(target=main, assets_dir="assets")
