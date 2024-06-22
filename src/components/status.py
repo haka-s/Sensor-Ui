@@ -71,7 +71,7 @@ class MachineCards(ft.Row):
     async def fetch_and_create_card(self, machine_id):
         headers = {"Authorization": f"Bearer {self.access_token}"}
         async with aiohttp.ClientSession() as session:
-            url = f"http://localhost:8000/maquinas/{machine_id}"
+            url = f"https://localhost/api/maquinas/{machine_id}"
             try:
                 async with session.get(url, headers=headers) as response:
                     if response.status == 200:

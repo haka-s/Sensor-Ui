@@ -1,7 +1,7 @@
 import flet as ft
 import requests
 
-API_BASE_URL = "http://localhost:8000"
+API_BASE_URL = "https://localhost/api"
 
 class Login(ft.Column):
     def __init__(self, page, on_login_success=None):

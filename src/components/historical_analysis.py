@@ -126,7 +126,7 @@ class SensorDataViewer(ft.Column):
     def manual_fetch_data(self, e):
         self.selected_machine = 3
         headers = {"Authorization": f"Bearer {self.access_token}"}
-        url = (f"http://localhost:8000/maquinas/{self.selected_machine}/sensores/historial"
+        url = (f"https://localhost/api/maquinas/{self.selected_machine}/sensores/historial"
                f"?nombre_sensor={self.sensor_name}&tipo_sensor={self.sensor_type}"
                f"&fecha_inicio={self.start_date}&fecha_fin={self.end_date}")
         asyncio.run(self.fetch_and_display_data(headers, url))      

@@ -1,3 +1,5 @@
 flet==0.22.*
 pytz 
 python-dateutil
+aiohttp
+matplotlib
