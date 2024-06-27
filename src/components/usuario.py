@@ -1,41 +1,43 @@
 import flet as ft
-from components.logon import Login
-from components.register import Registry
+from components.inicio_sesion import InicioSesion
+from components.registro import Registro
 
-class LoginRegisterScreen(ft.Column):
-    def __init__(self, page, on_login_success=None):
+class PantallaInicioSesion(ft.Column):
+    def __init__(self, pagina, al_iniciar_sesion=None):
         super().__init__(
             alignment=ft.MainAxisAlignment.CENTER,
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             expand=True
         )
-        self.page = page
-        self.login_form = Login(page, on_login_success=on_login_success)
-        self.register_form = Registry(page)
+        self.pagina = pagina
+        self.formulario_inicio_sesion = InicioSesion(pagina, al_iniciar_sesion=al_iniciar_sesion)
+        self.enlace_registro = ft.TextButton("¿No tienes cuenta? Regístrate", on_click=self.mostrar_registro)
+        
+        self.controls = [self.formulario_inicio_sesion, self.enlace_registro]
 
-        tabs = ft.Tabs(
-            selected_index=0,
-            animation_duration=300,
-            tabs=[
-                ft.Tab(
-                    text="Iniciar Sesión",
-                    icon=ft.icons.LOGIN,
-                    content=ft.Container(
-                        content=self.login_form,
-                        alignment=ft.alignment.center,
-                        expand=True
-                    )
-                ),
-                ft.Tab(
-                    text="Registrarse",
-                    icon=ft.icons.APP_REGISTRATION,
-                    content=ft.Container(
-                        content=self.register_form,
-                        alignment=ft.alignment.center,
-                        expand=True
-                    )
-                )
-            ],
+    def mostrar_registro(self, e):
+        pantalla_registro = PantallaRegistro(self.pagina, al_registrarse=self.mostrar_inicio_sesion)
+        self.pagina.clean()
+        self.pagina.add(pantalla_registro)
+
+    def mostrar_inicio_sesion(self):
+        self.pagina.clean()
+        self.pagina.add(self)
+
+class PantallaRegistro(ft.Column):
+    def __init__(self, pagina, al_registrarse=None):
+        super().__init__(
+            alignment=ft.MainAxisAlignment.CENTER,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             expand=True
         )
-        self.controls = [tabs]
+        self.pagina = pagina
+        self.formulario_registro = Registro(pagina, al_registrarse=al_registrarse)
+        self.enlace_inicio_sesion = ft.TextButton("¿Ya tienes cuenta? Inicia sesión", on_click=self.mostrar_inicio_sesion)
+        
+        self.controls = [self.formulario_registro, self.enlace_inicio_sesion]
+
+    def mostrar_inicio_sesion(self, e):
+        pantalla_inicio_sesion = PantallaInicioSesion(self.pagina)
+        self.pagina.clean()
+        self.pagina.add(pantalla_inicio_sesion)
