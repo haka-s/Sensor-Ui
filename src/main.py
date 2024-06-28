@@ -5,6 +5,8 @@ from components.navegacion import ResponsiveMenuLayout
 from components.status import MachineCards
 from components.usuario import PantallaInicioSesion
 from components.historical_analysis import SensorDataViewer
+from components.eventos_criticos import CriticalEventsViewer
+from components.notificaciones import NotificationsViewer
 
 URL_BASE_API = "https://localhost/api"
 
@@ -12,7 +14,7 @@ def verificar_token(token_acceso):
     try:
         respuesta = requests.get(
             f"{URL_BASE_API}/auth/verify",
-            headers={"Authorization": f"Bearer {token_acceso}"}
+            headers={"Authorization": f"Bearer {token_acceso}"},verify=r"cert\fullchain.pem"
         )
         return respuesta.status_code == 200
     except requests.RequestException:
@@ -55,15 +57,24 @@ def main(page: ft.Page):
     def mostrar_menu_principal():
         boton_menu = ft.IconButton(ft.icons.MENU)
         token_acceso = page.client_storage.get("access_token")
-        componente_tarjetas_maquinas = MachineCards(machines=[1, 2, 3], access_token=token_acceso)
+        componente_tarjetas_maquinas = MachineCards(machines=[1], access_token=token_acceso)
         historico = SensorDataViewer(access_token=token_acceso)
+        notificaciones = NotificationsViewer(access_token=token_acceso)
+        eventos = CriticalEventsViewer(access_token=token_acceso)
         page.appbar = ft.AppBar(
             leading=boton_menu,
             leading_width=40,
             title=ft.Text("Dashboard máquinas"),
             bgcolor=ft.colors.SURFACE_VARIANT,
+            actions=[
+                ft.PopupMenuButton(
+                    items=[
+                        ft.PopupMenuItem(text="Cambiar contraseña", on_click=cambiar_contraseña),
+                        ft.PopupMenuItem(text="Cerrar sesión", on_click=cerrar_sesion),
+                    ]
+                ),
+            ],
         )
-
         paginas = [
             (
                 dict(
@@ -85,8 +96,8 @@ def main(page: ft.Page):
             ),
             (
                 dict(
-                    icon=ft.icons.LANDSCAPE_OUTLINED,
-                    selected_icon=ft.icons.LANDSCAPE,
+                    icon=ft.icons.BAR_CHART_OUTLINED,
+                    selected_icon=ft.icons.BAR_CHART,
                     label="Datos Históricos",
                 ),
                 ft.Row(controls=[
@@ -95,6 +106,44 @@ def main(page: ft.Page):
                         controls=[
                             ft.Card(content=ft.Container(ft.Text('Datos Históricos', weight="bold"), padding=8)),
                             historico
+                        ],
+                        expand=True,
+                    ),
+                ],
+                expand=True,
+                )
+            ),
+            (
+                dict(
+                    icon=ft.icons.NOTIFICATIONS_OUTLINED,
+                    selected_icon=ft.icons.NOTIFICATIONS,
+                    label="Notificaciones",
+                ),
+                ft.Row(controls=[
+                    ft.Column(
+                        horizontal_alignment="stretch",
+                        controls=[
+                            ft.Card(content=ft.Container(ft.Text('Notificaciones', weight="bold"), padding=8)),
+                            notificaciones
+                        ],
+                        expand=True,
+                    ),
+                ],
+                expand=True,
+                )
+            ),
+            (
+                dict(
+                    icon=ft.icons.STOP_CIRCLE_OUTLINED,
+                    selected_icon=ft.icons.STOP_CIRCLE,
+                    label="Eventos Críticos",
+                ),
+                ft.Row(controls=[
+                    ft.Column(
+                        horizontal_alignment="stretch",
+                        controls=[
+                            ft.Card(content=ft.Container(ft.Text('Eventos Críticos', weight="bold"), padding=8)),
+                            eventos
                         ],
                         expand=True,
                     ),
@@ -116,22 +165,15 @@ def main(page: ft.Page):
         ]
 
         disposicion_menu = ResponsiveMenuLayout(page, paginas)
-
-        page.appbar.actions = [
-            ft.TextButton(text="Cerrar sesión", on_click=lambda _: cerrar_sesion()),
-            ft.TextButton(text="Cambiar contraseña", on_click=lambda _: cambiar_contraseña())
-        ]
-
         page.clean()
         page.add(disposicion_menu)
-
         boton_menu.on_click = lambda e: disposicion_menu.toggle_navigation()
 
-    def cerrar_sesion():
+    def cerrar_sesion(_):
         page.client_storage.remove("access_token")
         mostrar_pantalla_inicio_sesion()
 
-    def cambiar_contraseña():
+    def cambiar_contraseña(_):
         mostrar_dialogo_cambio_contraseña()
 
     def mostrar_dialogo_cambio_contraseña():
@@ -153,7 +195,7 @@ def main(page: ft.Page):
                 json={
                     "current_password": campo_contraseña_actual.value,
                     "new_password": campo_nueva_contraseña.value
-                }
+                },verify=r"cert\fullchain.pem"
             )
 
             if respuesta.status_code == 200:
@@ -183,12 +225,13 @@ def main(page: ft.Page):
     def verificar_autenticacion():
         if esta_usuario_autenticado(page):
             mostrar_menu_principal()
+            print('true')
         else:
+            print('false')
             mostrar_pantalla_inicio_sesion()
 
     verificar_autenticacion()
-
-    page.on_route_change = lambda _: verificar_autenticacion()
+    #page.on_route_change = lambda _: verificar_autenticacion()
 
 if __name__ == "__main__":
     ft.app(target=main, assets_dir="assets")

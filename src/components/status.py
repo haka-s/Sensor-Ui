@@ -5,12 +5,15 @@ import pytz
 from dateutil.relativedelta import relativedelta
 from dateutil.tz import tzlocal
 from datetime import datetime
+
 class MachineCards(ft.Row):
     def __init__(self, machines, access_token, update_interval=1):
         super().__init__()
         self.machines = machines
         self.update_interval = update_interval
         self.access_token = access_token
+        self.spacing = 20
+        self.alignment = ft.MainAxisAlignment.CENTER
     def format_timedelta(self,delta):
         if delta.days > 0:
             return f"last update {delta.days} days ago"
@@ -86,61 +89,63 @@ class MachineCards(ft.Row):
 
     def create_machine_card(self, data):
         sensor_icons = {
-            "boolean": "POWER_SETTINGS_NEW_ROUNDED",
-            "distancia": "space_dashboard",
-            "velocidad": "speed",
-            "energia": "bolt",
-            "presion": "compress",
-            "volumen": "waves",
-            "temperatura": "thermostat"
+            "boolean": ft.icons.POWER_SETTINGS_NEW_ROUNDED,
+            "distancia": ft.icons.SPACE_DASHBOARD,
+            "velocidad": ft.icons.SPEED,
+            "energia": ft.icons.BOLT,
+            "presion": ft.icons.COMPRESS,
+            "volumen": ft.icons.WAVES,
+            "temperatura": ft.icons.THERMOSTAT
         }
 
         sensor_controls = []
-        for sensor in data.get('sensores', []):  # Safe access to 'sensores'
+        for sensor in data.get('sensores', []):
             sensor_name = sensor.get('nombre', 'Sensor Desconocido')
-            color = "green" if sensor.get('estado') else "red"
-            icon = sensor_icons.get(sensor.get('tipo', 'unknown'), "device_unknown")
-            sensor_type = sensor.get('tipo', 'unknown').capitalize()
+            color = ft.colors.GREEN if sensor.get('estado') else ft.colors.RED
+            icon = sensor_icons.get(sensor.get('tipo', 'unknown'), ft.icons.DEVICE_UNKNOWN)
             sensor_value = sensor.get('valor', 'N/A')
             sensor_unit = sensor.get('unidad', '')
-            status = 'Activo' if sensor.get('estado') else 'Inactivo'
+            
             if sensor_unit == 'estado':
                 sensor_description = f"{sensor_name}"
             else:
                 sensor_description = f"{sensor_name}: {sensor_value} {sensor_unit}"
 
-            sensor_row = ft.Row([
-                ft.Icon(name=icon, color=color),
-                ft.Text(sensor_description, color=color)
-            ])
+            sensor_row = ft.Container(
+                content=ft.Row([
+                    ft.Icon(name=icon, color=color),
+                    ft.Text(sensor_description, color=color, size=14)
+                ]),
+                padding=5,
+                border_radius=5,
+                bgcolor=ft.colors.with_opacity(0.1, color)
+            )
             sensor_controls.append(sensor_row)
-        card = ft.Container(
-            content=ft.Card(
+
+        card = ft.Card(
+            content=ft.Container(
                 content=ft.Column(
                     [
                         ft.Row([
-                            ft.Icon(ft.icons.ALBUM),
-                            ft.Text(f"{data.get('nombre', 'Maquina Desconocida')}", size=25, weight='bold', font_family='Roboto',text_align=ft.TextAlign.CENTER),
-                        ],tight=True, alignment=ft.MainAxisAlignment.CENTER),  # Center alignment for the title row
-                        ft.Text(self.last_update_time(self.find_newest_update(data)), size=12, color='grey'),  # Center alignment for update time
-                        *sensor_controls
-                    ],alignment=ft.MainAxisAlignment.CENTER
-
+                            ft.Icon(ft.icons.ALBUM, color=ft.colors.BLUE),
+                            ft.Text(f"{data.get('nombre', 'Maquina Desconocida')}", 
+                                    size=20, 
+                                    weight=ft.FontWeight.BOLD, 
+                                    color=ft.colors.BLUE)
+                        ], alignment=ft.MainAxisAlignment.CENTER),
+                        ft.Text(self.last_update_time(self.find_newest_update(data)), 
+                                size=12, 
+                                color=ft.colors.GREY_500,
+                                text_align=ft.TextAlign.CENTER),
+                        ft.Divider(),
+                        ft.Column(sensor_controls, spacing=10)
+                    ],
+                    alignment=ft.MainAxisAlignment.CENTER,
+                    spacing=15
                 ),
-                variant=ft.CardVariant.OUTLINED,
-                margin=5,
-                elevation=5,
-
-                is_semantic_container=False,
-                expand_loose=True
+                padding=20,
             ),
-            padding=10,
-            margin=15,
-            alignment=ft.alignment.center,
-            expand=True
-# Padding around the Card
-              # Take full width available
-        )#width=ft.FULL,  # Take full width available
-            
-            
+            elevation=5,
+            surface_tint_color=ft.colors.BLUE_100,
+        )
         return card
