@@ -2,7 +2,7 @@ import flet as ft
 import aiohttp
 import asyncio
 
-class NotificationsViewer(ft.Column):
+class NotificationsViewer(ft.Container):
     def __init__(self, access_token):
         super().__init__()
         self.access_token = access_token
@@ -10,12 +10,13 @@ class NotificationsViewer(ft.Column):
         self.notifications_list = ft.ListView(spacing=10, padding=20, auto_scroll=True)
         self.refresh_button = ft.ElevatedButton("Actualizar notificaciones", on_click=self.refresh_notifications)
         
-        self.controls = [
+        self.content = ft.Column([
             ft.Text("Notificaciones", size=24, weight=ft.FontWeight.BOLD),
             self.refresh_button,
             self.notifications_list
-        ]
-        self.spacing = 20
+        ], scroll=ft.ScrollMode.AUTO, expand=True)
+        self.padding = 20
+        self.expand = True
         
     def did_mount(self):
         self.refresh_notifications(None)
@@ -51,7 +52,8 @@ class NotificationsViewer(ft.Column):
                             ft.Text(f"Fecha: {notification['sent_timestamp']}")
                         ]),
                         padding=10
-                    )
+                    ),
+                    elevation=2
                 )
             )
         self.update()

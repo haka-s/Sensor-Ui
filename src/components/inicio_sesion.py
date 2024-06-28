@@ -1,3 +1,4 @@
+import asyncio
 import flet as ft
 import requests
 
@@ -58,23 +59,33 @@ class InicioSesion(ft.Container):
         usuario = self.campo_usuario.value
         contraseña = self.campo_contraseña.value
 
-        respuesta = requests.post(
-            f"{URL_BASE_API}/auth/jwt/login",
-            data={"username": usuario, "password": contraseña},verify=r"cert\fullchain.pem",
-        )
-
-        if respuesta.status_code == 200:
-            token = respuesta.json()["access_token"]
-            self.pagina.client_storage.set("access_token", token)
-            self.pagina.snack_bar = ft.SnackBar(
-                ft.Text("¡Inicio de sesión exitoso!"), open=True, action="OK"
+        try:
+            respuesta = requests.post(
+                f"{URL_BASE_API}/auth/jwt/login",
+                data={"username": usuario, "password": contraseña},
+                verify=r"cert\fullchain.pem",
             )
-            self.al_iniciar_sesion()
-        else:
+
+            if respuesta.status_code == 200:
+                token = respuesta.json()["access_token"]
+                self.pagina.client_storage.set("access_token", token)
+                self.pagina.snack_bar = ft.SnackBar(
+                    ft.Text("¡Inicio de sesión exitoso!"), open=True, action="OK"
+                )
+                if self.al_iniciar_sesion:
+                    self.al_iniciar_sesion()
+            else:
+                self.pagina.snack_bar = ft.SnackBar(
+                    ft.Text("Falló el inicio de sesión, verifica tus credenciales"),
+                    open=True,
+                    action="OK",
+                )
+        except requests.RequestException as e:
             self.pagina.snack_bar = ft.SnackBar(
-                ft.Text("Falló el inicio de sesión, verifica tus credenciales"),
+                ft.Text(f"Error de conexión: {str(e)}"),
                 open=True,
                 action="OK",
             )
+        
         self.pagina.snack_bar.open = True
         self.pagina.update()

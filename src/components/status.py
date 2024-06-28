@@ -6,14 +6,26 @@ from dateutil.relativedelta import relativedelta
 from dateutil.tz import tzlocal
 from datetime import datetime
 
-class MachineCards(ft.Row):
+class MachineCards(ft.Container):
     def __init__(self, machines, access_token, update_interval=1):
         super().__init__()
         self.machines = machines
         self.update_interval = update_interval
         self.access_token = access_token
-        self.spacing = 20
-        self.alignment = ft.MainAxisAlignment.CENTER
+        
+        self.cards_row = ft.Row(
+            spacing=20,
+            scroll=ft.ScrollMode.AUTO,
+            expand=True
+        )
+        
+        self.content = ft.Column([
+            ft.Text("Estado de las Máquinas", size=24, weight=ft.FontWeight.BOLD),
+            self.cards_row
+        ])
+        self.padding = 20
+        self.expand = True
+
     def format_timedelta(self,delta):
         if delta.days > 0:
             return f"last update {delta.days} days ago"
@@ -66,7 +78,7 @@ class MachineCards(ft.Row):
         while True:
             tasks = [self.fetch_and_create_card(machine_id) for machine_id in self.machines]
             cards = await asyncio.gather(*tasks)
-            self.controls = cards
+            self.cards_row.controls = cards
             self.update()
             print(f"Updated UI with {len(cards)} cards")
             await asyncio.sleep(self.update_interval)
@@ -127,7 +139,7 @@ class MachineCards(ft.Row):
                 content=ft.Column(
                     [
                         ft.Row([
-                            ft.Icon(ft.icons.ALBUM, color=ft.colors.BLUE),
+                            ft.Icon(ft.icons.PRECISION_MANUFACTURING, color=ft.colors.BLUE),
                             ft.Text(f"{data.get('nombre', 'Maquina Desconocida')}", 
                                     size=20, 
                                     weight=ft.FontWeight.BOLD, 
@@ -138,14 +150,17 @@ class MachineCards(ft.Row):
                                 color=ft.colors.GREY_500,
                                 text_align=ft.TextAlign.CENTER),
                         ft.Divider(),
-                        ft.Column(sensor_controls, spacing=10)
+                        ft.Column(sensor_controls, spacing=10, scroll=ft.ScrollMode.AUTO)
                     ],
                     alignment=ft.MainAxisAlignment.CENTER,
                     spacing=15
                 ),
                 padding=20,
+                width=300,
+                height=400,
             ),
             elevation=5,
             surface_tint_color=ft.colors.BLUE_100,
         )
         return card
+

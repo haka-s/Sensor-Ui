@@ -1,4 +1,3 @@
-import asyncio
 import flet as ft
 import requests
 from components.navegacion import ResponsiveMenuLayout
@@ -14,7 +13,8 @@ def verificar_token(token_acceso):
     try:
         respuesta = requests.get(
             f"{URL_BASE_API}/auth/verify",
-            headers={"Authorization": f"Bearer {token_acceso}"},verify=r"cert\fullchain.pem"
+            headers={"Authorization": f"Bearer {token_acceso}"},
+            verify=r"cert\fullchain.pem"
         )
         return respuesta.status_code == 200
     except requests.RequestException:
@@ -55,12 +55,35 @@ def main(page: ft.Page):
         page.add(pantalla_inicio_sesion)
 
     def mostrar_menu_principal():
+        def obtener_maquinas():
+            token_acceso = page.client_storage.get("access_token")
+            respuesta = requests.get(
+                f"{URL_BASE_API}/maquinas",
+                headers={"Authorization": f"Bearer {token_acceso}"},
+                verify=r"cert\fullchain.pem"
+            )
+            if respuesta.status_code == 200:
+                return respuesta.json()
+            return []
+
         boton_menu = ft.IconButton(ft.icons.MENU)
         token_acceso = page.client_storage.get("access_token")
-        componente_tarjetas_maquinas = MachineCards(machines=[1], access_token=token_acceso)
-        historico = SensorDataViewer(access_token=token_acceso)
+        
+        maquinas = obtener_maquinas()
+        
+        opciones_maquinas = [ft.dropdown.Option(text=maquina['nombre'], key=str(maquina['id'])) for maquina in maquinas]
+        
+        selector_maquinas = ft.Dropdown(
+            label="Seleccionar máquina",
+            options=opciones_maquinas,
+            width=200,
+        )
+
+        componente_tarjetas_maquinas = MachineCards(machines=[maquina['id'] for maquina in maquinas], access_token=token_acceso)
+        historico = SensorDataViewer(access_token=token_acceso, machine_selector=selector_maquinas)
         notificaciones = NotificationsViewer(access_token=token_acceso)
         eventos = CriticalEventsViewer(access_token=token_acceso)
+        
         page.appbar = ft.AppBar(
             leading=boton_menu,
             leading_width=40,
@@ -75,6 +98,7 @@ def main(page: ft.Page):
                 ),
             ],
         )
+        
         paginas = [
             (
                 dict(
@@ -195,7 +219,8 @@ def main(page: ft.Page):
                 json={
                     "current_password": campo_contraseña_actual.value,
                     "new_password": campo_nueva_contraseña.value
-                },verify=r"cert\fullchain.pem"
+                },
+                verify=r"cert\fullchain.pem"
             )
 
             if respuesta.status_code == 200:
@@ -229,9 +254,8 @@ def main(page: ft.Page):
         else:
             print('false')
             mostrar_pantalla_inicio_sesion()
-
+    #async await verificar_autenticacion()
     verificar_autenticacion()
-    #page.on_route_change = lambda _: verificar_autenticacion()
 
 if __name__ == "__main__":
     ft.app(target=main, assets_dir="assets")

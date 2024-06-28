@@ -2,7 +2,7 @@ import flet as ft
 import aiohttp
 import asyncio
 
-class CriticalEventsViewer(ft.Column):
+class CriticalEventsViewer(ft.Container):
     def __init__(self, access_token):
         super().__init__()
         self.access_token = access_token
@@ -10,12 +10,13 @@ class CriticalEventsViewer(ft.Column):
         self.events_list = ft.ListView(spacing=10, padding=20, auto_scroll=True)
         self.refresh_button = ft.ElevatedButton("Actualizar eventos críticos", on_click=self.refresh_events)
         
-        self.controls = [
+        self.content = ft.Column([
             ft.Text("Eventos Críticos", size=24, weight=ft.FontWeight.BOLD),
             self.refresh_button,
             self.events_list
-        ]
-        self.spacing = 20
+        ], scroll=ft.ScrollMode.AUTO, expand=True)
+        self.padding = 20
+        self.expand = True
         
     def did_mount(self):
         self.refresh_events(None)
@@ -52,7 +53,8 @@ class CriticalEventsViewer(ft.Column):
                             ft.Text(f"Fecha: {event['timestamp']}")
                         ]),
                         padding=10
-                    )
+                    ),
+                    elevation=2
                 )
             )
         self.update()
