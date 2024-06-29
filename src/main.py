@@ -58,7 +58,7 @@ def main(page: ft.Page):
         def obtener_maquinas():
             token_acceso = page.client_storage.get("access_token")
             respuesta = requests.get(
-                f"{URL_BASE_API}/maquinas",
+                f"{URL_BASE_API}/maquinas/lista",
                 headers={"Authorization": f"Bearer {token_acceso}"},
                 verify=r"cert\fullchain.pem"
             )
@@ -79,7 +79,7 @@ def main(page: ft.Page):
             width=200,
         )
 
-        componente_tarjetas_maquinas = MachineCards(machines=[maquina['id'] for maquina in maquinas], access_token=token_acceso)
+        componente_tarjetas_maquinas = MachineCards( access_token=token_acceso)
         historico = SensorDataViewer(access_token=token_acceso, machine_selector=selector_maquinas)
         notificaciones = NotificationsViewer(access_token=token_acceso)
         eventos = CriticalEventsViewer(access_token=token_acceso)

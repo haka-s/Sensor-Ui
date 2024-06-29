@@ -104,8 +104,20 @@ class Registro(ft.Container):
                 self.mostrar_popup_verificacion(correo)
             elif respuesta.status_code == 400:
                 detail = respuesta.json().get('detail', '')
-                if "already exists" in detail:
-                    self.mostrar_error("Este correo electrónico ya está registrado.")
+                if "REGISTER_USER_ALREADY_EXISTS" in detail:
+                    
+                    verificacion_respuesta = requests.get(
+                        f"{URL_BASE_API}/auth/check-verification/{correo}",
+                        verify=RUTA_CERTIFICADO
+                    )
+                    if verificacion_respuesta.status_code == 200:
+                        is_verified = verificacion_respuesta.json().get('is_verified', False)
+                        if not is_verified:
+                            self.manejar_usuario_no_verificado(correo, contraseña)
+                        else:
+                            self.manejar_usuario_existente(correo)
+                    else:
+                        self.mostrar_error("No se pudo verificar el estado del usuario.")
                 else:
                     self.mostrar_error(f"Falló el registro: {detail}")
             else:
@@ -127,6 +139,9 @@ class Registro(ft.Container):
             self.mostrar_error(f"Error al actualizar la información: {str(e)}")
 
     def manejar_usuario_existente(self, correo):
+        def cerrar_dialogo(_):
+            self.pagina.dialog.open = False
+            self.pagina.update()
         contenido = ft.Container(
             content=ft.Column(
                 controls=[
@@ -180,6 +195,9 @@ class Registro(ft.Container):
         self.pagina.dialog.open = False
         self.pagina.dialog.close()
     def mostrar_popup_verificacion(self, correo, reenvio=False):
+        def cerrar_dialogo(_):
+            self.pagina.dialog.open = False
+            self.pagina.update()
         mensaje = "Hemos enviado un nuevo código de verificación a tu correo electrónico. " if reenvio else "Hemos enviado un código de verificación a tu correo electrónico. "
         mensaje += "Por favor, ingresa el código de 6 dígitos a continuación:"
 
@@ -235,14 +253,13 @@ class Registro(ft.Container):
             modal=True,
             content=contenido,
             actions=[
-                ft.TextButton("Cerrar", on_click=lambda _: setattr(self.pagina.dialog, 'open', False))
+                ft.TextButton("Cerrar", on_click=cerrar_dialogo)
             ],
             actions_alignment=ft.MainAxisAlignment.END,
         )
         
         self.pagina.dialog.open = True
         self.pagina.update()
-
     def verificar_codigo(self, correo):
         codigo = self.campo_codigo_verificacion.value
         try:
@@ -261,7 +278,7 @@ class Registro(ft.Container):
                     action="OK",
                 )
                 self.pagina.dialog.open = False
-                self.pagina.dialog.close()
+                self.pagina.update()
                 self.pagina.snack_bar.open = True
                 self.pagina.update()
                 
@@ -282,6 +299,8 @@ class Registro(ft.Container):
         self.pagina.snack_bar.open = True
         self.pagina.update()
     def ir_a_inicio_sesion(self, e):
+        self.pagina.dialog.open = False
+        self.pagina.update()
         from components.usuario import PantallaInicioSesion
         pantalla_inicio_sesion = PantallaInicioSesion(self.pagina)
         self.pagina.clean()

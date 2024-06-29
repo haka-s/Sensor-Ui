@@ -1,4 +1,5 @@
 import asyncio
+import traceback
 import aiohttp
 import flet as ft
 import pytz
@@ -7,9 +8,8 @@ from dateutil.tz import tzlocal
 from datetime import datetime
 
 class MachineCards(ft.Container):
-    def __init__(self, machines, access_token, update_interval=1):
+    def __init__(self,  access_token, update_interval=1):
         super().__init__()
-        self.machines = machines
         self.update_interval = update_interval
         self.access_token = access_token
         
@@ -68,37 +68,54 @@ class MachineCards(ft.Container):
             return "hace unos momentos"       
 
     def did_mount(self):
-        
-        # Access token can be updated from client storage if needed
-        # self.access_token = self.page.client_storage.get("access_token")
         self.page.run_task(self.update_machine_cards)
 
     async def update_machine_cards(self):
         print("Starting update_machine_cards loop")
         while True:
-            tasks = [self.fetch_and_create_card(machine_id) for machine_id in self.machines]
-            cards = await asyncio.gather(*tasks)
+            await self.fetch_machine_list()
+            cards = await self.fetch_and_create_cards()
             self.cards_row.controls = cards
             self.update()
             print(f"Updated UI with {len(cards)} cards")
             await asyncio.sleep(self.update_interval)
 
-    async def fetch_and_create_card(self, machine_id):
+    async def fetch_machine_list(self):
         headers = {"Authorization": f"Bearer {self.access_token}"}
         async with aiohttp.ClientSession() as session:
-            url = f"https://localhost/api/maquinas/{machine_id}"
+            url = "https://localhost/api/maquinas/lista"
+            try:
+                async with session.get(url, headers=headers) as response:
+                    if response.status == 200:
+                        self.machines = await response.json()
+                    else:
+                        print(f"Error {response.status}: No se pudo obtener la lista de máquinas")
+            except Exception as e:
+                print(f"Error al obtener la lista de máquinas: {str(e)}")
+
+    async def fetch_and_create_cards(self):
+        cards = []
+        for machine in self.machines:
+            machine_cards = await self.fetch_and_create_machine_cards(machine)
+            cards.extend(machine_cards)
+        return cards
+
+    async def fetch_and_create_machine_cards(self, machine):
+        headers = {"Authorization": f"Bearer {self.access_token}"}
+        async with aiohttp.ClientSession() as session:
+            url = f"https://localhost/api/maquinas/{machine['id']}"
             try:
                 async with session.get(url, headers=headers) as response:
                     if response.status == 200:
                         data = await response.json()
                         return self.create_machine_card(data)
                     else:
-                        return ft.Text(f"Error {response.status}: No se puedo obtener datos sobre la maquina {machine_id}")
+                        return [ft.Text(f"Error {response.status}: No se pudo obtener datos sobre la maquina {machine['id']}")]
             except aiohttp.ClientError as e:
-                return ft.Text(f"Error HTTP: {str(e)}")
+                return [ft.Text(f"Error HTTP: {str(e)}")]
             except Exception as e:
-                return ft.Text(f"Algo Salio mal: {str(e)}")
-
+                traceback.print_exc()
+                return [ft.Text(f"Algo Salio mal: {str(e)}")]
     def create_machine_card(self, data):
         sensor_icons = {
             "boolean": ft.icons.POWER_SETTINGS_NEW_ROUNDED,
