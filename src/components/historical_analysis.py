@@ -1,188 +1,373 @@
-import asyncio
 import flet as ft
 import datetime
-import aiohttp
-import traceback
-import plotly.graph_objects as go
-from flet.plotly_chart import PlotlyChart
+import requests
+from collections import Counter
+import pytz
+RUTA_CERTIFICADO = r"cert\fullchain.pem"
 
-
-class SensorDataViewer(ft.Container):
-    def __init__(self, access_token, machine_selector):
+class VisualizadorDatosSensor(ft.Container):
+    def __init__(self, token_acceso):
         super().__init__()
-        self.access_token = access_token
-        self.machine_selector = machine_selector
-        self.selected_machine = None
-        self.sensor_name = ""
-        self.sensor_type = ""
-        self.start_date = None
-        self.end_date = None
-
-        self.machine_selector = ft.Dropdown(
-            label="Seleccionar máquina",
-            options=[
-                ft.dropdown.Option(text='Estación 1', key='1'),
-                ft.dropdown.Option(text="Estación 2", key='2'),
-            ],
-            width=200,
-            on_change=self.on_machine_selected,
-        )
-
-        self.sensor_name_input = ft.TextField(
-            label="Nombre del sensor", 
-            on_change=self.on_filter_change, 
-            width=200
-        )
-        self.sensor_type_input = ft.TextField(
-            label="Tipo de sensor", 
-            on_change=self.on_filter_change, 
-            width=200
-        )
-
-        self.start_date_picker = ft.DatePicker(
-            on_change=self.on_date_change,
-            first_date=datetime.date(2023, 1, 1),
-            last_date=datetime.date(2025, 12, 31),
-        )
-        self.end_date_picker = ft.DatePicker(
-            on_change=self.on_date_change,
-            first_date=datetime.date(2023, 1, 1),
-            last_date=datetime.date(2025, 12, 31),
-        )
-
-        self.graph_view = ft.Container(
-            bgcolor=ft.colors.BACKGROUND,
-            padding=20,
-            border_radius=10,
-            content=ft.Column([], scroll=ft.ScrollMode.AUTO),
-            expand=True
-        )
-        self.error_text = ft.Text("", color=ft.colors.RED, visible=False, text_align=ft.TextAlign.CENTER)
-        self.fetch_data_button = ft.ElevatedButton("Obtener datos", on_click=self.manual_fetch_data)
-        self.trend_analysis_button = ft.ElevatedButton("Análisis de tendencias", on_click=self.fetch_trend_analysis)
-        self.selected_start_date_text = ft.Text("No se ha seleccionado la fecha de inicio")
-        self.selected_end_date_text = ft.Text("No se ha seleccionado la fecha de fin")
-        self.s_date_button = ft.ElevatedButton("Seleccionar fecha de inicio", on_click=lambda _: self.start_date_picker.pick_date())
-        self.e_date_button = ft.ElevatedButton("Seleccionar fecha de fin", on_click=lambda _: self.end_date_picker.pick_date())
-        self.loading = ft.ProgressBar(visible=False, width=400, color="amber", bgcolor="#eeeeee")
         
+        self.token_acceso = token_acceso
+        self.maquina_seleccionada = None
+        self.sensor_seleccionado = None
+        self.fecha_inicio = None
+        self.fecha_fin = None
+        self.todos_los_datos = []
+        self.tamano_pagina = 1000
+
+        self.selector_maquina = ft.Dropdown(
+            label="Seleccionar máquina",
+            options=[],
+            width=200,
+            on_change=self.al_seleccionar_maquina,
+        )
+
+        self.selector_sensor = ft.Dropdown(
+            label="Seleccionar sensor",
+            options=[],
+            width=200,
+            on_change=self.al_seleccionar_sensor,
+            disabled=True
+        )
+
+        self.selector_fecha_inicio = ft.DatePicker(
+            on_change=self.al_cambiar_fecha,
+            first_date=datetime.date(2023, 1, 1),
+            last_date=datetime.date(2025, 12, 31),
+        )
+        self.selector_fecha_fin = ft.DatePicker(
+            on_change=self.al_cambiar_fecha,
+            first_date=datetime.date(2023, 1, 1),
+            last_date=datetime.date(2025, 12, 31),
+        )
+
+        self.contenedor_grafico = ft.Container(
+            content=ft.Text("No hay datos para mostrar", color="grey"),
+            alignment=ft.alignment.center,
+            width=800,
+            height=400,
+            border=ft.border.all(1, "grey"),
+        )
+
+        self.contenedor_grafico_circular = ft.Container(
+            content=ft.Text("No hay datos para mostrar", color="grey"),
+            alignment=ft.alignment.center,
+            width=400,
+            height=400,
+            border=ft.border.all(1, "grey"),
+        )
+
+        self.texto_error = ft.Text("", color=ft.colors.RED, visible=False, text_align=ft.TextAlign.CENTER)
+        self.boton_obtener_datos = ft.ElevatedButton("Obtener datos", on_click=self.obtener_datos_manual)
+        self.texto_fecha_inicio_seleccionada = ft.Text("No se ha seleccionado la fecha de inicio")
+        self.texto_fecha_fin_seleccionada = ft.Text("No se ha seleccionado la fecha de fin")
+        self.boton_fecha_inicio = ft.ElevatedButton("Seleccionar fecha de inicio", on_click=lambda _: self.selector_fecha_inicio.pick_date())
+        self.boton_fecha_fin = ft.ElevatedButton("Seleccionar fecha de fin", on_click=lambda _: self.selector_fecha_fin.pick_date())
+        self.barra_progreso = ft.ProgressBar(visible=False, width=400, color="amber", bgcolor="#eeeeee")
+
         self.content = ft.Column([
-            ft.Row([self.machine_selector, self.sensor_name_input, self.sensor_type_input], alignment=ft.MainAxisAlignment.CENTER),
-            ft.Row([self.s_date_button, self.e_date_button], alignment=ft.MainAxisAlignment.CENTER),
-            ft.Row([self.start_date_picker, self.end_date_picker], alignment=ft.MainAxisAlignment.CENTER),
-            self.selected_start_date_text,
-            self.selected_end_date_text,
-            self.error_text,
-            ft.Row([self.fetch_data_button, self.trend_analysis_button], alignment=ft.MainAxisAlignment.CENTER),
-            self.loading,
-            self.graph_view
+            ft.Row([self.selector_maquina, self.selector_sensor], alignment=ft.MainAxisAlignment.CENTER),
+            ft.Row([self.boton_fecha_inicio, self.boton_fecha_fin], alignment=ft.MainAxisAlignment.CENTER),
+            ft.Row([self.selector_fecha_inicio, self.selector_fecha_fin], alignment=ft.MainAxisAlignment.CENTER),
+            ft.Row([self.texto_fecha_inicio_seleccionada], alignment=ft.MainAxisAlignment.CENTER),
+            ft.Row([self.texto_fecha_fin_seleccionada], alignment=ft.MainAxisAlignment.CENTER),
+            ft.Row([self.texto_error], alignment=ft.MainAxisAlignment.CENTER),
+            ft.Row([self.boton_obtener_datos], alignment=ft.MainAxisAlignment.CENTER),
+            ft.Row([self.barra_progreso], alignment=ft.MainAxisAlignment.CENTER),
+            ft.Row([
+                self.contenedor_grafico], alignment=ft.MainAxisAlignment.CENTER),
+            ft.Row([self.contenedor_grafico_circular], alignment=ft.MainAxisAlignment.CENTER),
         ], scroll=ft.ScrollMode.AUTO, expand=True)
         self.padding = 20
         self.expand = True
-    def on_machine_selected(self, e):
-        self.selected_machine = e.control.key
+    def did_mount(self):
+        self.obtener_maquinas()
 
-    def on_filter_change(self, e):
-        setattr(self, e.control.tag, e.control.value)
+    def obtener_maquinas(self):
+        cabeceras = {"Authorization": f"Bearer {self.token_acceso}"}
+        url = "https://localhost/api/maquinas/lista"
+        try:
+            respuesta = requests.get(url, headers=cabeceras, verify=RUTA_CERTIFICADO)
+            if respuesta.status_code == 200:
+                maquinas = respuesta.json()
+                self.selector_maquina.options = [
+                    ft.dropdown.Option(key=str(maquina['id']), text=maquina['nombre'])
+                    for maquina in maquinas
+                ]
+                self.update()
+            else:
+                self.texto_error.value = f"Error al obtener la lista de máquinas: {respuesta.status_code}"
+                self.texto_error.visible = True
+                self.update()
+        except Exception as e:
+            self.texto_error.value = f"Error al obtener la lista de máquinas: {str(e)}"
+            self.texto_error.visible = True
+            self.update()
 
-    def on_date_change(self, e):
-        date_str = e.control.value.strftime('%Y-%m-%d %H:%M:%S')
-        if e.control == self.start_date_picker:
-            self.start_date = date_str
-            self.selected_start_date_text.value = f"Fecha de inicio seleccionada: {self.start_date}"
-        elif e.control == self.end_date_picker:
-            self.end_date = date_str
-            self.selected_end_date_text.value = f"Fecha de fin seleccionada: {self.end_date}"
+    def al_seleccionar_maquina(self, e):
+        self.maquina_seleccionada = e.control.value
+        self.selector_sensor.disabled = False
+        self.selector_sensor.options = []
+        self.sensor_seleccionado = None
+        self.obtener_sensores()
         self.update()
-    def manual_fetch_data(self, e):
-        self.selected_machine = 3
-        headers = {"Authorization": f"Bearer {self.access_token}"}
-        url = (f"https://localhost/api/maquinas/{self.selected_machine}/sensores/historial"
-               f"?nombre_sensor={self.sensor_name}&tipo_sensor={self.sensor_type}"
-               f"&fecha_inicio={self.start_date}&fecha_fin={self.end_date}")
-        asyncio.run(self.fetch_and_display_data(headers, url))      
-    def fetch_trend_analysis(self, e):
-        if not self.selected_machine or not self.sensor_name:
-            self.error_text.value = "Por favor, seleccione una máquina y un sensor."
-            self.error_text.visible = True
+
+    def obtener_sensores(self):
+        if not self.maquina_seleccionada:
+            return
+
+        cabeceras = {"Authorization": f"Bearer {self.token_acceso}"}
+        url = f"https://localhost/api/maquinas/{self.maquina_seleccionada}"
+        try:
+            respuesta = requests.get(url, headers=cabeceras, verify=RUTA_CERTIFICADO)
+            if respuesta.status_code == 200:
+                datos_maquina = respuesta.json()
+                self.selector_sensor.options = [
+                    ft.dropdown.Option(key=sensor['nombre'], text=f"{sensor['nombre']} ({sensor['tipo']})")
+                    for sensor in datos_maquina['sensores']
+                ]
+                self.update()
+            else:
+                self.texto_error.value = f"Error al obtener la lista de sensores: {respuesta.status_code}"
+                self.texto_error.visible = True
+                self.update()
+        except Exception as e:
+            self.texto_error.value = f"Error al obtener la lista de sensores: {str(e)}"
+            self.texto_error.visible = True
+            self.update()
+
+    def al_seleccionar_sensor(self, e):
+        self.sensor_seleccionado = e.control.value
+
+    def al_cambiar_fecha(self, e):
+        fecha_str = e.control.value.strftime('%Y-%m-%d')
+        if e.control == self.selector_fecha_inicio:
+            self.fecha_inicio = f"{fecha_str} 00:00:00"
+            self.texto_fecha_inicio_seleccionada.value = f"Fecha de inicio seleccionada: {self.fecha_inicio}"
+        elif e.control == self.selector_fecha_fin:
+            self.fecha_fin = f"{fecha_str} 23:59:59"
+            self.texto_fecha_fin_seleccionada.value = f"Fecha de fin seleccionada: {self.fecha_fin}"
+        self.update()
+
+    def obtener_datos_manual(self, e):
+        if not self.maquina_seleccionada or not self.sensor_seleccionado:
+            self.texto_error.value = "Por favor, seleccione una máquina y un sensor."
+            self.texto_error.visible = True
             self.update()
             return
 
-        headers = {"Authorization": f"Bearer {self.access_token}"}
-        url = f"https://localhost/api/analisis-tendencias/{self.selected_machine}/{self.sensor_name}"
-        if self.start_date and self.end_date:
-            url += f"?fecha_inicio={self.start_date}&fecha_fin={self.end_date}"
-        
-        asyncio.run(self.fetch_and_display_trend_analysis(headers, url))
+        self.todos_los_datos = []
+        self.obtener_todos_los_datos()
 
-    async def fetch_and_display_trend_analysis(self, headers, url):
-        self.loading.visible = True
-        self.update()
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url, headers=headers) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        self.display_trend_analysis(data)
-                    else:
-                        self.error_text.value = f"Error HTTP: {response.status}"
-                        self.error_text.visible = True
-        except Exception as e:
-            print(traceback.format_exc())
-            self.error_text.value = f"Error al obtener análisis de tendencias: {str(e)}"
-            self.error_text.visible = True
-        finally:
-            self.loading.visible = False
-            self.update()
 
-    async def fetch_and_display_data(self, headers, url):
-        self.loading.visible = True
-        self.update()
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url, headers=headers) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        self.display_interactive_chart(data)
-                    else:
-                        self.error_text.value = f"Error HTTP: {response.status}"
-                        self.error_text.visible = True
-        except Exception as e:
-            print(traceback.format_exc())
-            self.error_text.value = f"Error al obtener datos: {str(e)}"
-            self.error_text.visible = True
-        finally:
-            self.loading.visible = False
-            self.update()
-
-    def display_interactive_chart(self, data):
-        if not data:
-            self.error_text.value = "No hay datos disponibles para mostrar."
-            self.error_text.visible = True
+    def mostrar_grafico(self):
+        if not self.todos_los_datos:
+            self.contenedor_grafico.content = ft.Text("No hay datos disponibles para mostrar.")
+            self.contenedor_grafico_circular.content = ft.Text("No hay datos disponibles para mostrar.")
+            self.barra_progreso.visible = False
             self.update()
             return
 
-        fig = go.Figure()
+        try:
+            utc = pytz.UTC
+            fecha_inicio = datetime.datetime.strptime(self.fecha_inicio, "%Y-%m-%d %H:%M:%S").replace(tzinfo=utc)
+            fecha_fin = datetime.datetime.strptime(self.fecha_fin, "%Y-%m-%d %H:%M:%S").replace(tzinfo=utc)
 
-        for sensor in data:
-            x = [datetime.fromisoformat(point['fecha_hora']) for point in sensor['datos']]
-            y = [point['valor'] for point in sensor['datos']]
+            # Filtrar los datos dentro del rango de fechas seleccionado
+            datos_filtrados = [
+                sensor for sensor in self.todos_los_datos
+                if fecha_inicio <= datetime.datetime.fromisoformat(sensor['fecha_hora']).replace(tzinfo=utc) <= fecha_fin
+            ]
+
+            if not datos_filtrados:
+                self.contenedor_grafico.content = ft.Text("No hay datos en el rango de fechas seleccionado.")
+                self.contenedor_grafico_circular.content = ft.Text("No hay datos en el rango de fechas seleccionado.")
+                self.barra_progreso.visible = False
+                self.update()
+                return
+
+            # Convertir todos los puntos a tuplas (datetime, valor)
+            puntos = [
+                (datetime.datetime.fromisoformat(sensor['fecha_hora']).replace(tzinfo=utc), float(sensor['valor']))
+                for sensor in datos_filtrados
+            ]
+
+            puntos.sort(key=lambda p: p[0])
+
+            estados = Counter()
+            for _, valor in puntos:
+                estados['Activo' if valor >= 1 else 'Inactivo'] += 1
+
+            min_y, max_y = min(p[1] for p in puntos), max(p[1] for p in puntos)
+            rango_y = max_y - min_y
+
+            if rango_y == 0:
+                rango_y = 1
+                max_y += 0.5
+                min_y -= 0.5
+
+            # Determinar el rango de fechas total
+            rango_fechas = (fecha_fin.date() - fecha_inicio.date()).days + 1
+
+            # Configurar etiquetas del eje X
+            num_etiquetas = min(rango_fechas, 8)
+            intervalo = max(1, rango_fechas // num_etiquetas)
+            etiquetas_eje_x = [fecha_inicio.date() + datetime.timedelta(days=i*intervalo) for i in range(num_etiquetas)]
+
+            labels_styled = [
+                ft.ChartAxisLabel(
+                    value=i * intervalo,
+                    label=ft.Container(
+                        ft.Text(
+                            fecha.strftime("%Y-%m-%d"),
+                            size=16,
+                            weight=ft.FontWeight.BOLD,
+                            color=ft.colors.with_opacity(0.5, ft.colors.ON_SURFACE),
+                        ),
+                        margin=ft.margin.only(top=10),
+                    ),
+                ) for i, fecha in enumerate(etiquetas_eje_x)
+            ]
+
+            # Configurar etiquetas del eje Y
+            num_etiquetas_y = 5
+            intervalo_y = rango_y / (num_etiquetas_y - 1) if rango_y > 0 else 1
+            etiquetas_eje_y = [min_y + i * intervalo_y for i in range(num_etiquetas_y)]
             
-            fig.add_trace(go.Scatter(
-                x=x,
-                y=y,
-                mode='lines+markers',
-                name=f"{sensor['nombre_sensor']} ({sensor['tipo_sensor']})"
-            ))
+            labels_y_styled = [
+                ft.ChartAxisLabel(
+                    value=valor,
+                    label=ft.Text(
+                        f"{valor:.2f}",
+                        size=16,
+                        weight=ft.FontWeight.BOLD,
+                        color=ft.colors.with_opacity(0.5, ft.colors.ON_SURFACE),
+                    ),
+                ) for valor in etiquetas_eje_y
+            ]
 
-        fig.update_layout(
-            title="Datos históricos de sensores",
-            xaxis_title="Fecha y Hora",
-            yaxis_title="Valor",
-            legend_title="Sensores",
-            height=600
-        )
+            # Normalizar los puntos para el gráfico
+            x_min = min(p[0] for p in puntos)
+            x_max = max(p[0] for p in puntos)
+            x_range = (x_max - x_min).total_seconds()
+            
+            normalized_points = [
+                ft.LineChartDataPoint(
+                    x=(p[0] - x_min).total_seconds() / x_range * (rango_fechas - 1),
+                    y=p[1]
+                ) for p in puntos
+            ]
 
-        chart = PlotlyChart(fig, expand=True)
-        self.graph_view.content.controls = [chart]
-        self.graph_view.update()
+            grafico = ft.LineChart(
+                tooltip_bgcolor=ft.colors.with_opacity(0.8, ft.colors.RED),
+                expand=True,
+                min_y=min_y - (rango_y * 0.1),
+                max_y=max_y + (rango_y * 0.1),
+                min_x=0,
+                max_x=rango_fechas - 1,
+                left_axis=ft.ChartAxis(
+                    labels_size=40,
+                    title=ft.Text("Valor"),
+                    labels_interval=1,
+                    labels=labels_y_styled,
+                ),
+                bottom_axis=ft.ChartAxis(
+                    labels_size=40,
+                    title=ft.Text("Fecha"),
+                    labels=labels_styled,
+                    labels_interval=1
+                ),
+                data_series=[
+                    ft.LineChartData(
+                        data_points=normalized_points,
+                        stroke_width=2,
+                        color=ft.colors.BLUE,
+                        curved=True,
+                        stroke_cap_round=True,
+                    )
+                ],
+                border=ft.border.all(1, ft.colors.GREY),
+                horizontal_grid_lines=ft.ChartGridLines(
+                    interval=1,
+                    color=ft.colors.GREY_300,
+                    width=1,
+                ),
+                vertical_grid_lines=ft.ChartGridLines(
+                    interval=1,
+                    color=ft.colors.GREY_300,
+                    width=1,
+                ),
+            )
+
+            self.contenedor_grafico.content = grafico
+
+            # Gráfico circular
+            total = sum(estados.values())
+            if total > 0:
+                grafico_circular = ft.PieChart(
+                    sections=[
+                        ft.PieChartSection(
+                            value=estados['Activo'],
+                            title="Activo",
+                            color=ft.colors.GREEN,
+                            radius=100,
+                        ),
+                        ft.PieChartSection(
+                            value=estados['Inactivo'],
+                            title="Inactivo",
+                            color=ft.colors.RED,
+                            radius=100,
+                        ),
+                    ],
+                    sections_space=0,
+                    center_space_radius=60,
+                    expand=True,
+                )
+
+                self.contenedor_grafico_circular.content = ft.Column([
+                    grafico_circular,
+                    ft.Text(f"Activo: {estados['Activo'] / total:.1%}"),
+                    ft.Text(f"Inactivo: {estados['Inactivo'] / total:.1%}"),
+                ], alignment=ft.MainAxisAlignment.CENTER)
+            else:
+                self.contenedor_grafico_circular.content = ft.Text("No hay datos suficientes para el gráfico circular")
+
+        except Exception as e:
+            self.texto_error.value = f"Error al procesar datos para el gráfico: {str(e)}"
+            self.texto_error.visible = True
+
+        finally:
+            self.barra_progreso.visible = False
+            self.update()
+    def obtener_todos_los_datos(self, pagina=1):
+        self.barra_progreso.visible = True
+        self.update()
+
+        cabeceras = {"Authorization": f"Bearer {self.token_acceso}"}
+        url = (f"https://localhost/api/maquinas/{self.maquina_seleccionada}/sensores/historial"
+               f"?nombre_sensor={self.sensor_seleccionado}"
+               f"&fecha_inicio={self.fecha_inicio}&fecha_fin={self.fecha_fin}"
+               f"&page={pagina}&page_size={self.tamano_pagina}")
+
+        try:
+            respuesta = requests.get(url, headers=cabeceras, verify=RUTA_CERTIFICADO)
+            if respuesta.status_code == 200:
+                datos = respuesta.json()
+                self.todos_los_datos.extend(datos['data'])
+                
+                if len(datos['data']) == self.tamano_pagina:
+                    self.obtener_todos_los_datos(pagina + 1)
+                else:
+                    self.mostrar_grafico()
+            else:
+                self.texto_error.value = f"Error HTTP: {respuesta.status_code}"
+                self.texto_error.visible = True
+                self.barra_progreso.visible = False
+                self.update()
+        except Exception as e:
+            self.texto_error.value = f"Error al obtener datos: {str(e)}"
+            self.texto_error.visible = True
+            self.barra_progreso.visible = False
+            self.update()

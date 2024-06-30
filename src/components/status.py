@@ -96,8 +96,8 @@ class MachineCards(ft.Container):
     async def fetch_and_create_cards(self):
         cards = []
         for machine in self.machines:
-            machine_cards = await self.fetch_and_create_machine_cards(machine)
-            cards.extend(machine_cards)
+            machine_card = await self.fetch_and_create_machine_cards(machine)
+            cards.append(machine_card)  # Append the single card, not extend
         return cards
 
     async def fetch_and_create_machine_cards(self, machine):
@@ -110,12 +110,12 @@ class MachineCards(ft.Container):
                         data = await response.json()
                         return self.create_machine_card(data)
                     else:
-                        return [ft.Text(f"Error {response.status}: No se pudo obtener datos sobre la maquina {machine['id']}")]
+                        return ft.Text(f"Error {response.status}: No se pudo obtener datos sobre la maquina {machine['id']}")
             except aiohttp.ClientError as e:
-                return [ft.Text(f"Error HTTP: {str(e)}")]
+                return ft.Text(f"Error HTTP: {str(e)}")
             except Exception as e:
                 traceback.print_exc()
-                return [ft.Text(f"Algo Salio mal: {str(e)}")]
+                return ft.Text(f"Algo Salio mal: {str(e)}")
     def create_machine_card(self, data):
         sensor_icons = {
             "boolean": ft.icons.POWER_SETTINGS_NEW_ROUNDED,

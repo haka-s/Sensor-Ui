@@ -233,7 +233,7 @@ class Registro(ft.Container):
                             ),
                             ft.OutlinedButton(
                                 "Cancelar",
-                                on_click=lambda _: self.pagina.dialog.close()
+                                on_click=lambda _: cerrar_dialogo()
                             )
                         ],
                         alignment=ft.MainAxisAlignment.CENTER
@@ -253,7 +253,7 @@ class Registro(ft.Container):
             modal=True,
             content=contenido,
             actions=[
-                ft.TextButton("Cerrar", on_click=cerrar_dialogo)
+                ft.TextButton("Cerrar", on_click=lambda _:cerrar_dialogo())
             ],
             actions_alignment=ft.MainAxisAlignment.END,
         )

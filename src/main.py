@@ -3,7 +3,7 @@ import requests
 from components.navegacion import ResponsiveMenuLayout
 from components.status import MachineCards
 from components.usuario import PantallaInicioSesion
-from components.historical_analysis import SensorDataViewer
+from components.historical_analysis import VisualizadorDatosSensor
 from components.eventos_criticos import CriticalEventsViewer
 from components.notificaciones import NotificationsViewer
 
@@ -79,8 +79,10 @@ def main(page: ft.Page):
             width=200,
         )
 
-        componente_tarjetas_maquinas = MachineCards( access_token=token_acceso)
-        historico = SensorDataViewer(access_token=token_acceso, machine_selector=selector_maquinas)
+        token_acceso = page.client_storage.get("access_token")
+        
+        componente_tarjetas_maquinas = MachineCards(access_token=token_acceso)
+        historico = VisualizadorDatosSensor(token_acceso=token_acceso)
         notificaciones = NotificationsViewer(access_token=token_acceso)
         eventos = CriticalEventsViewer(access_token=token_acceso)
         

@@ -1,7 +1,6 @@
 import flet as ft
 from components.inicio_sesion import InicioSesion
 from components.registro import Registro
-
 class PantallaInicioSesion(ft.Container):
     def __init__(self, pagina, al_iniciar_sesion=None):
         super().__init__(
@@ -17,6 +16,7 @@ class PantallaInicioSesion(ft.Container):
             alignment=ft.MainAxisAlignment.CENTER,
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
         )
+
 
     def mostrar_registro(self, e):
         pantalla_registro = PantallaRegistro(self.pagina, al_registrarse=self.mostrar_inicio_sesion)
