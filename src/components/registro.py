@@ -195,7 +195,7 @@ class Registro(ft.Container):
         self.pagina.dialog.open = False
         self.pagina.dialog.close()
     def mostrar_popup_verificacion(self, correo, reenvio=False):
-        def cerrar_dialogo(_):
+        def cerrar_dialogo():
             self.pagina.dialog.open = False
             self.pagina.update()
         mensaje = "Hemos enviado un nuevo código de verificación a tu correo electrónico. " if reenvio else "Hemos enviado un código de verificación a tu correo electrónico. "
@@ -233,7 +233,7 @@ class Registro(ft.Container):
                             ),
                             ft.OutlinedButton(
                                 "Cancelar",
-                                on_click=lambda _: cerrar_dialogo()
+                                on_click=lambda x: cerrar_dialogo()
                             )
                         ],
                         alignment=ft.MainAxisAlignment.CENTER
@@ -253,7 +253,7 @@ class Registro(ft.Container):
             modal=True,
             content=contenido,
             actions=[
-                ft.TextButton("Cerrar", on_click=lambda _:cerrar_dialogo())
+                ft.TextButton("Cerrar", on_click=lambda x:cerrar_dialogo())
             ],
             actions_alignment=ft.MainAxisAlignment.END,
         )
@@ -272,24 +272,36 @@ class Registro(ft.Container):
             respuesta.raise_for_status()
 
             if respuesta.status_code == 200:
+                # Primero, cerramos el diálogo de verificación
+                self.pagina.dialog.open = False
+                self.pagina.update()
+
+                # Mostramos el mensaje de bienvenida
                 self.pagina.snack_bar = ft.SnackBar(
                     ft.Text("Verificación completada, ¡bienvenido!"),
                     open=True,
                     action="OK",
                 )
-                self.pagina.dialog.open = False
-                self.pagina.update()
                 self.pagina.snack_bar.open = True
                 self.pagina.update()
                 
-                if self.al_registrarse:
-                    self.al_registrarse()
+                # Esperamos un momento para que el usuario pueda ver el mensaje
+                self.redirigir_a_inicio_sesion
             else:
                 self.mostrar_error(f"Error en la verificación: {respuesta.json().get('detail', 'Error desconocido')}")
 
         except requests.RequestException as e:
             self.mostrar_error(f"Error en la verificación: {str(e)}")
 
+    def redirigir_a_inicio_sesion(self):
+        from components.usuario import PantallaInicioSesion
+        pantalla_inicio_sesion = PantallaInicioSesion(self.pagina)
+        self.pagina.clean()
+        self.pagina.add(pantalla_inicio_sesion)
+        
+        # Si hay alguna función adicional que deba ejecutarse después del registro
+        if self.al_registrarse:
+            self.al_registrarse()
     def mostrar_error(self, mensaje):
         self.pagina.snack_bar = ft.SnackBar(
             ft.Text(mensaje),
@@ -298,10 +310,3 @@ class Registro(ft.Container):
         )
         self.pagina.snack_bar.open = True
         self.pagina.update()
-    def ir_a_inicio_sesion(self, e):
-        self.pagina.dialog.open = False
-        self.pagina.update()
-        from components.usuario import PantallaInicioSesion
-        pantalla_inicio_sesion = PantallaInicioSesion(self.pagina)
-        self.pagina.clean()
-        self.pagina.add(pantalla_inicio_sesion)

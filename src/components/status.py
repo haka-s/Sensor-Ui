@@ -71,13 +71,13 @@ class MachineCards(ft.Container):
         self.page.run_task(self.update_machine_cards)
 
     async def update_machine_cards(self):
-        print("Starting update_machine_cards loop")
+        #print("Starting update_machine_cards loop")
         while True:
             await self.fetch_machine_list()
             cards = await self.fetch_and_create_cards()
             self.cards_row.controls = cards
             self.update()
-            print(f"Updated UI with {len(cards)} cards")
+            #print(f"Updated UI with {len(cards)} cards")
             await asyncio.sleep(self.update_interval)
 
     async def fetch_machine_list(self):

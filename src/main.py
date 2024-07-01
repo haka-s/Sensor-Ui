@@ -162,13 +162,13 @@ def main(page: ft.Page):
                 dict(
                     icon=ft.icons.STOP_CIRCLE_OUTLINED,
                     selected_icon=ft.icons.STOP_CIRCLE,
-                    label="Eventos Críticos",
+                    label="Reportes",
                 ),
                 ft.Row(controls=[
                     ft.Column(
                         horizontal_alignment="stretch",
                         controls=[
-                            ft.Card(content=ft.Container(ft.Text('Eventos Críticos', weight="bold"), padding=8)),
+                            ft.Card(content=ft.Container(ft.Text('Reportes', weight="bold"), padding=8)),
                             eventos
                         ],
                         expand=True,
@@ -252,9 +252,7 @@ def main(page: ft.Page):
     def verificar_autenticacion():
         if esta_usuario_autenticado(page):
             mostrar_menu_principal()
-            print('true')
         else:
-            print('false')
             mostrar_pantalla_inicio_sesion()
     #async await verificar_autenticacion()
     verificar_autenticacion()
